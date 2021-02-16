@@ -8,6 +8,8 @@
 #include <unistd.h> 		// to include exec family functions
 #include <sys/wait.h> 		// to include wait function
 #include <fcntl.h>		    // to include open function
+#include <readline/readline.h> 
+#include <readline/history.h> 
 using namespace std;
 
 
@@ -24,7 +26,7 @@ using namespace std;
 #define ANSI_BLUE_BOLD "\033[1;34m"
 #define ANSI_DEFAULT "\033[0m"
 #define ANSI_CLEAR "\033[2J\033[1;1H"
-
+#define MX 1024
 
 
 
@@ -50,14 +52,13 @@ void execute_command(string command);
 
 void display_help(){
 	printf(ANSI_CLEAR);
-
 	printf(ANSI_RED_BOLD);
 	printf("\n\t*******************************************\n");
 	printf("\t*                                         *\n");
 	printf("\t*\tWelcome to my Linux-Shell    \t  *\n");
 	printf("\t*                                         *\n");
 	printf("\t*                                         *\n");
-	printf("\t*\tTye 'exit' to leave this shell.\t  *\n");
+	printf("\t*\tType 'exit' to leave this shell.  *\n");
 	printf("\t*                                         *\n");
 	printf("\t*******************************************\n\n");
 	printf(ANSI_DEFAULT);
@@ -71,6 +72,7 @@ int shell_loop(){
 	while(1){
 
 		string command;
+		char *buffer;
 		bool is_background = false;
 			
 	    // get current working directory
@@ -78,22 +80,19 @@ int shell_loop(){
 	    getcwd(cwd, sizeof(cwd)); 
 	    char *username;
 	    username = getenv("USER");
-	    char hostname[1024];
-  		gethostname(hostname, 1025);
+	    char hostname[MX];
+  		gethostname(hostname, 1+MX);
 
 	    
-	    printf(ANSI_GREEN_BOLD);
-	    printf("%s@%s : ", getenv("USER") , hostname );
-	    printf(ANSI_YELLOW_BOLD);
+		string dislpay_prompt = ANSI_GREEN_BOLD + (string)username + ANSI_DEFAULT + " @ " + ANSI_YELLOW_BOLD + (string)cwd + ANSI_DEFAULT + " $> ";
+		dislpay_prompt += "";
 
-	    cout << cwd;;
-	    printf(ANSI_DEFAULT);
-	    cout <<" $> ";
-
-		getline(cin , command);
+		buffer = readline( dislpay_prompt.c_str() );
+		command = buffer;
 
 		command = trim_outer_spaces(command);
-		
+		add_history(buffer);
+
 		// check for & at the end
 		if(command[(int)command.size()-1] == '&'){
 			is_background = true;
@@ -210,7 +209,7 @@ int shell_loop(){
 int main(){
 	
 	display_help();
-
+	using_history();
 	int status = 1;
 	while(status){
 		status = shell_loop();
@@ -263,13 +262,13 @@ void set_input_redirection(string& s){
         int inp_file_desc = open(s.c_str(),O_RDONLY);  // Open in read only mode and store the input file descriptor
         
         if(inp_file_desc < 0){
-            cout<<"Error :"<<s<<endl;
+            cout<<"Error."<<s<<endl;
             exit(1);
         }
 
         // Redirect the input using file descriptor
         if( dup2(inp_file_desc,0) < 0){
-            cout<<"Error :"<<endl;
+            cout<<"Error."<<endl;
             exit(1);
         }
     }
@@ -284,7 +283,7 @@ void set_output_redirection(string& s){
         int out_file_desc = open(s.c_str(), O_CREAT|O_WRONLY|O_TRUNC, S_IRWXU);  // Open in create and truncate mode and store the input file descriptor
         // Redirect output using file descriptor
         if( dup2(out_file_desc,1) < 0){
-            cout<<"Error :"<<endl;
+            cout<<"Error."<<endl;
             exit(1);
         }
     }
